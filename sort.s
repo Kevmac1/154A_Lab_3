@@ -109,46 +109,54 @@ counting_sort:
 
 	# Initialize count array to 0
 	addi t1, zero, 0           # t1 = 0 (index for count array)
-	li t2, 0                   # t2 = 0 (for count array size)
 	
+	# Allocate space for count array
+	la t3, count               # Load address for count array
 init_count:
-	sw t2, 0(t0)               # count[t1] = 0
-	addi t0, t0, 4             # Move to the next count slot
+	sw zero, 0(t3)             # count[t1] = 0
+	addi t3, t3, 4             # Move to the next count slot
 	addi t1, t1, 1             # t1++
-	bne t1, maxnumber + 1, init_count # Repeat until t1 >= maxnumber
+	bne t1, t0, init_count     # Repeat until t1 >= maxnumber + 1
 
 	# Count occurrences of each key
 	addi t1, zero, 0           # t1 = 0 (index for keys)
+	
 count_keys:
 	lw t3, 0(s0)               # t3 = keys[t1]
-	addi t4, zero, 1           # t4 = 1
-	add t3, t3, t4             # Increment count at keys[t1]
-	sw t3, 0(t3)               # count[keys[t1]]++
+	addi t4, t3, 0             # t4 = keys[t1]
+	slli t4, t4, 2             # t4 = t4 * 4 (word offset)
+	add t4, t4, t3             # Get address in count array
+	lw t5, 0(t4)               # Load count[keys[t1]]
+	addi t5, t5, 1             # Increment count
+	sw t5, 0(t4)               # Store updated count
 	addi s0, s0, 4             # Move to the next key
 	addi t1, t1, 1             # t1++
 	bne t1, s2, count_keys     # Repeat until t1 >= numkeys
 
 	# Calculate the cumulative count
 	addi t1, zero, 1           # t1 = 1 (start from index 1)
+	t3 = count                 # Reset t3 to point to count array
 	
 cumulative_count:
-	lw t3, 0(t0)               # Load count[t1]
-	lw t4, 0(t0 - 4)           # Load count[t1-1]
-	add t3, t3, t4             # count[t1] += count[t1 - 1]
-	sw t3, 0(t0)               # Store updated count
-	addi t0, t0, 4             # Move to the next count slot
+	lw t5, 0(t3)               # Load count[t1]
+	lw t6, -4(t3)              # Load count[t1-1]
+	add t5, t5, t6             # count[t1] += count[t1 - 1]
+	sw t5, 0(t3)               # Store updated count
+	addi t3, t3, 4             # Move to the next count slot
 	addi t1, t1, 1             # t1++
-	bne t1, maxnumber + 1, cumulative_count # Repeat until t1 > maxnumber
+	bne t1, t0, cumulative_count # Repeat until t1 > maxnumber
 
 	# Build the output array
 	addi t1, zero, 0           # t1 = 0 (index for keys)
 	
 build_output:
 	lw t3, 0(s0)               # Get keys[t1]
-	lw t4, 0(t3)               # Load count[keys[t1]]
-	addi t4, t4, -1            # Decrement count[keys[t1]]
-	sw t4, 0(t3)               # Update count[keys[t1]]
-	sw t3, 0(s1 + t4)          # Place keys[t1] into the output array
+	addi t4, t3, 0             # t4 = keys[t1]
+	slli t4, t4, 2             # t4 = keys[t1] * 4 (word offset)
+	lw t5, 0(t4)               # Load count[keys[t1]]
+	addi t5, t5, -1            # Decrement count[keys[t1]]
+	sw t5, 0(t4)               # Update count[keys[t1]]
+	sw t3, 0(s1 + t5)          # Place keys[t1] into the output array
 	addi s0, s0, 4             # Move to the next key
 	addi t1, t1, 1             # t1++
 	bne t1, s2, build_output   # Repeat until t1 >= numkeys
