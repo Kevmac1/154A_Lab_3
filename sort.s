@@ -95,7 +95,7 @@ read_data:
 	jr	ra
 
 
-counting_sort:
+
 ######################### 
 ## your code goes here ##
 #########################
