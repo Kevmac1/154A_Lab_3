@@ -1,3 +1,4 @@
+
 ##############################################################################
 # File: sort.s
 # Skeleton for ECE 154A
@@ -97,103 +98,80 @@ read_data:
 counting_sort:
 ######################### 
 ## your code goes here ##
-counting_sort:
-    # Prologue: Save registers on the stack
-    addi sp, sp, -32         # Adjust stack pointer for local variables
-    sw ra, 28(sp)            # Save return address
-    sw s0, 24(sp)            # Save s0
-    sw s1, 20(sp)            # Save s1
-    sw s2, 16(sp)            # Save s2
-    sw s3, 12(sp)            # Save s3
-    sw s4, 8(sp)             # Save s4
-
-    # Initialize count array to 0
-    mv s0, sp                # Use s0 as a pointer for the count array (on stack)
-    mv s1, a3                # s1 = maxnumber
-    addi s1, s1, 1           # s1 = maxnumber + 1
-    li t0, 0                 # t0 = index n (starts from 0)
-
-init_count:
-    beq t0, s1, count_done   # If n > maxnumber, exit loop
-    sw zero, 0(s0)           # count[n] = 0
-    addi s0, s0, 4           # Move to the next count element
-    addi t0, t0, 1           # n++
-    j init_count             # Repeat
-
-count_done:
-    # Count occurrences from keys array
-    mv s0, sp                # Reset s0 to point to the count array
-    mv t0, zero              # t0 = 0 (index n)
-    mv s2, a2                # s2 = numkeys (length of keys array)
-    
-count_keys:
-    beq t0, s2, cumulative_sum  # If n >= numkeys, exit loop
-    slli t1, t0, 2           # t1 = n * 4 (byte offset for accessing keys)
-    add a4, a0, t1           # a4 = address of keys[n]
-    lw t2, 0(a4)             # t2 = keys[n]
-    slli t3, t2, 2           # t3 = keys[n] * 4 (offset into count array)
-    add t4, s0, t3           # t4 = address of count[keys[n]]
-    lw t5, 0(t4)             # Load count[keys[n]]
-    addi t5, t5, 1           # count[keys[n]]++
-    sw t5, 0(t4)             # Store updated count[keys[n]]
-    addi t0, t0, 1           # n++
-    j count_keys             # Repeat
-
-cumulative_sum:
-    # Calculate cumulative sum in count array
-    li t0, 1                 # Start from count[1] (skip count[0])
-    mv s3, a3                # s3 = maxnumber (for looping)
-    addi s3, s3, 1           # s3 = maxnumber + 1
-    mv s0, sp                # Reset s0 to point to the count array
-
-sum_loop:
-    beq t0, s3, fill_output  # If n > maxnumber, exit loop
-    slli t1, t0, 2           # t1 = n * 4 (byte offset)
-    add t4, s0, t1           # t4 = address of count[n]
-    lw t2, 0(t4)             # Load count[n]
-    addi t5, t0, -1          # t5 = n - 1
-    slli t6, t5, 2           # t6 = (n - 1) * 4
-    add t7, s0, t6           # t7 = address of count[n-1]
-    lw t8, 0(t7)             # Load count[n-1]
-    add t2, t2, t8           # count[n] = count[n] + count[n-1]
-    sw t2, 0(t4)             # Store updated count[n]
-    addi t0, t0, 1           # n++
-    j sum_loop               # Repeat
-
-fill_output:
-    # Fill output array
-    mv t0, zero              # n = 0
-    mv s0, sp                # Reset s0 to point to count array
-
-fill_output_loop:
-    beq t0, s2, sort_done    # If n >= numkeys, exit loop
-    slli t1, t0, 2           # t1 = n * 4 (byte offset for keys)
-    add a4, a0, t1           # a4 = address of keys[n]
-    lw t2, 0(a4)             # Load keys[n]
-    slli t3, t2, 2           # t3 = keys[n] * 4 (offset into count array)
-    add t4, s0, t3           # t4 = address of count[keys[n]]
-    lw t5, 0(t4)             # Load count[keys[n]]
-    addi t5, t5, -1          # count[keys[n]]-- (decrement)
-    sw t5, 0(t4)             # Store updated count[keys[n]]
-    slli t5, t5, 2           # Convert count[keys[n]] to byte offset
-    add t6, a1, t5           # t6 = address of output[count[keys[n]] - 1]
-    sw t2, 0(t6)             # output[count[keys[n]] - 1] = keys[n]
-    addi t0, t0, 1           # n++
-    j fill_output_loop       # Repeat
-
-sort_done:
-    # Epilogue: Restore registers and return
-    lw ra, 28(sp)            # Restore return address
-    lw s0, 24(sp)            # Restore s0
-    lw s1, 20(sp)            # Restore s1
-    lw s2, 16(sp)            # Restore s2
-    lw s3, 12(sp)            # Restore s3
-    lw s4, 8(sp)             # Restore s4
-    addi sp, sp, 32          # Restore stack pointer
-    jr ra                    # Return
-
-
 #########################
+counting_sort:
+	# Load the number of keys and maximum value
+	la    t0, numkeys        # Load address of numkeys
+	lw    t1, 0(t0)          # Load the number of keys into t1
+	la    t0, maxnumber      # Load address of maxnumber
+	lw    t2, 0(t0)          # Load the maximum key value into t2
+	addi  t2, t2, 1          # maxnumber + 1 to account for zero-based indexing
+
+	# Initialize count array to 0
+	la    t3, count          # Address of the count array
+	li    t4, 0              # Value 0
+count_init_loop:
+	beq   t2, zero, done_init_count # Break when maxnumber reaches 0
+	sw    t4, 0(t3)          # Store 0 at the current count index
+	addi  t3, t3, 4          # Move to next index
+	addi  t2, t2, -1         # Decrement maxnumber
+	j     count_init_loop    # Repeat until count array initialized
+done_init_count:
+
+	# Step 1: Count the occurrences of each key
+	la    t3, key            # Address of the key array
+	la    t4, count          # Address of the count array
+	lw    t5, numkeys        # Load the number of keys
+key_count_loop:
+	beq   t5, zero, done_count_keys  # Break if no more keys
+	lw    t6, 0(t3)          # Load the key value
+	sll   t7, t6, 2          # Multiply key by 4 to index count array
+	add   t8, t4, t7         # Address of count[key]
+	lw    t9, 0(t8)          # Load count[key]
+	addi  t9, t9, 1          # Increment count[key]
+	sw    t9, 0(t8)          # Store updated count[key]
+	addi  t3, t3, 4          # Move to the next key
+	addi  t5, t5, -1         # Decrement numkeys
+	j     key_count_loop
+done_count_keys:
+
+	# Step 2: Accumulate the counts
+	la    t4, count          # Address of the count array
+	addi  t5, t2, -1         # Set loop counter for accumulation
+accum_loop:
+	blt   t5, zero, done_accum # If done accumulating
+	lw    t6, 0(t4)          # Load count[i]
+	addi  t4, t4, 4          # Move to the next count
+	lw    t7, 0(t4)          # Load count[i+1]
+	add   t7, t7, t6         # Accumulate count[i+1] += count[i]
+	sw    t7, 0(t4)          # Store accumulated value
+	addi  t5, t5, -1         # Decrement loop counter
+	j     accum_loop
+done_accum:
+
+	# Step 3: Place the keys into output array
+	la    t3, key            # Address of the key array
+	la    t4, count          # Address of the count array
+	la    t8, output         # Address of the output array
+	lw    t5, numkeys        # Load the number of keys
+place_loop:
+	beq   t5, zero, done_place_keys  # Break when all keys are placed
+	lw    t6, 0(t3)          # Load the key value
+	sll   t7, t6, 2          # Multiply key by 4 to index count array
+	add   t9, t4, t7         # Address of count[key]
+	lw    t10, 0(t9)         # Load count[key]
+	addi  t10, t10, -1       # Decrement count[key]
+	sw    t10, 0(t9)         # Store updated count[key]
+	sll   t10, t10, 2        # Multiply count[key] by 4 (for word offset)
+	add   t11, t8, t10       # Address of output[count[key]]
+	sw    t6, 0(t11)         # Place key in the output array
+	addi  t3, t3, 4          # Move to the next key
+	addi  t5, t5, -1         # Decrement numkeys
+	j     place_loop
+done_place_keys:
+
+
+
  	jr ra
 #########################
 
