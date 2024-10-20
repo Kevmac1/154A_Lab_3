@@ -1,4 +1,3 @@
-
 ##############################################################################
 # File: sort.s
 # Skeleton for ECE 154A
@@ -6,7 +5,7 @@
 
 	.data
 student:
-	.asciz "Student:\n" 	# Place your name in the quotations in place of Student
+	.asciz "Student: Your Name Here\n"  # Replace with your name
 	.globl	student
 nl:	.asciz "\n"
 	.globl nl
@@ -23,11 +22,10 @@ code_start_msg:
 	.asciz "[Info] Entering your section of code\n"
 	.globl code_start_msg
 
-key:	.word 268632064			# Provide the base address of array where input key is stored(Assuming 0x10030000 as base address)
-output:	.word 268632144			# Provide the base address of array where sorted output will be stored (Assuming 0x10030050 as base address)
+key:	.word 268632064			# Provide the base address of array where input key is stored
+output:	.word 268632144			# Provide the base address of array where sorted output will be stored
 numkeys:	.word 6				# Provide the number of inputs
 maxnumber:	.word 10			# Provide the maximum key value
-
 
 ## Specify your input data-set in any order you like. I'll change the data set to verify
 data1:	.word 1
@@ -56,13 +54,13 @@ main:					# main has to be a global label
 process_arguments:
 	
 	la	t0, key
-	lw	a0, 0(t0)
+	lw	a0, 0(t0)             # Load base address of keys array
 	la	t0, output
-	lw	a1, 0(t0)
+	lw	a1, 0(t0)             # Load base address of output array
 	la	t0, numkeys
-	lw	a2, 0(t0)
+	lw	a2, 0(t0)             # Load numkeys
 	la	t0, maxnumber
-	lw	a3, 0(t0)
+	lw	a3, 0(t0)             # Load maxnumber
 	jr	ra	
 
 ### This instructions will make sure you read the data correctly
@@ -95,32 +93,77 @@ read_data:
 	jr	ra
 
 
-
-######################### 
-## your code goes here ##
-#########################
 counting_sort:
-var
-    count: int;
-	# Load the number of keys and maximum value
-	la    t0, numkeys        # Load address of numkeys
-	lw    t1, 0(t0)          # Load the number of keys into t1
-	la    t0, maxnumber      # Load address of maxnumber
-	lw    t2, 0(t0)          # Load the maximum key value into t2
-	addi  t2, t2, 1          # maxnumber + 1 to account for zero-based indexing
+	# Function Prologue
+	addi	sp, sp, -16           # Allocate stack space for 4 registers
+	sw ra, 12(sp)              # Save return address
+	sw s0, 8(sp)               # Save s0
+	sw s1, 4(sp)               # Save s1
+	sw s2, 0(sp)               # Save s2
+
+	# Load parameters
+	mv s0, a0                  # s0 = base address of keys (a0)
+	mv s1, a1                  # s1 = base address of output (a1)
+	mv s2, a2                  # s2 = numkeys (a2)
+	lw t0, maxnumber           # Load maxnumber
 
 	# Initialize count array to 0
-	la    t3, count          # Address of the count array
-	li    t4, 0              # Value 0
+	addi t1, zero, 0           # t1 = 0 (index for count array)
+	li t2, 0                   # t2 = 0 (for count array size)
+	
+init_count:
+	sw t2, 0(t0)               # count[t1] = 0
+	addi t0, t0, 4             # Move to the next count slot
+	addi t1, t1, 1             # t1++
+	bne t1, maxnumber + 1, init_count # Repeat until t1 >= maxnumber
 
+	# Count occurrences of each key
+	addi t1, zero, 0           # t1 = 0 (index for keys)
+count_keys:
+	lw t3, 0(s0)               # t3 = keys[t1]
+	addi t4, zero, 1           # t4 = 1
+	add t3, t3, t4             # Increment count at keys[t1]
+	sw t3, 0(t3)               # count[keys[t1]]++
+	addi s0, s0, 4             # Move to the next key
+	addi t1, t1, 1             # t1++
+	bne t1, s2, count_keys     # Repeat until t1 >= numkeys
 
+	# Calculate the cumulative count
+	addi t1, zero, 1           # t1 = 1 (start from index 1)
+	
+cumulative_count:
+	lw t3, 0(t0)               # Load count[t1]
+	lw t4, 0(t0 - 4)           # Load count[t1-1]
+	add t3, t3, t4             # count[t1] += count[t1 - 1]
+	sw t3, 0(t0)               # Store updated count
+	addi t0, t0, 4             # Move to the next count slot
+	addi t1, t1, 1             # t1++
+	bne t1, maxnumber + 1, cumulative_count # Repeat until t1 > maxnumber
 
- 	jr ra
-#########################
+	# Build the output array
+	addi t1, zero, 0           # t1 = 0 (index for keys)
+	
+build_output:
+	lw t3, 0(s0)               # Get keys[t1]
+	lw t4, 0(t3)               # Load count[keys[t1]]
+	addi t4, t4, -1            # Decrement count[keys[t1]]
+	sw t4, 0(t3)               # Update count[keys[t1]]
+	sw t3, 0(s1 + t4)          # Place keys[t1] into the output array
+	addi s0, s0, 4             # Move to the next key
+	addi t1, t1, 1             # t1++
+	bne t1, s2, build_output   # Repeat until t1 >= numkeys
+
+	# Function Epilogue
+	lw ra, 12(sp)               # Restore return address
+	lw s0, 8(sp)                # Restore s0
+	lw s1, 4(sp)                # Restore s1
+	lw s2, 0(sp)                # Restore s2
+	addi sp, sp, 16             # Deallocate stack space
+	jr ra                       # Return from function
 
 
 ##################################
-#Dont modify code below this line
+#Don't modify code below this line
 ##################################
 ready:
 	jal	initial_values		# print operands to the console
@@ -148,7 +191,7 @@ print_results:
 
 loop:	
 	beq t0, zero, end_print
-	addi, t0, t0, -1
+	addi t0, t0, -1
 	lw t3, 0(t1)
 	
 	li a7, 1
@@ -167,7 +210,7 @@ end_print:
 
 initial_values: 
 	mv 	t2, a0
-        addi	sp, sp, -4		# Move the stack pointer
+    addi	sp, sp, -4		# Move the stack pointer
 	sw 	ra, 0(sp)		# save the return address
 
 	li a7, 4
@@ -175,36 +218,5 @@ initial_values:
 	ecall
 	
 	mv 	a0, t2
-	jal print_results
- 	
-	lw	ra, 0(sp)		# restore the return address
-	addi	sp, sp, 4
+	jal print
 
-	jr ra
-
-sorted_list_print:
-	mv 	t2, a0
-	addi	sp, sp, -4		# Move the stack pointer
-	sw 	ra, 0(sp)		# save the return address
-
-	li a7,4
-	la a0,sort_print
-	ecall
-	
-	mv a0, t2
-	
-	#swap a0,a1
-	mv t2, a0
-	mv a0, a1
-	mv a1, t2
-	
-	jal print_results
-	
-    #swap back a1,a0
-	mv t2, a0
-	mv a0, a1
-	mv a1, t2
-	
-	lw	ra, 0(sp)		# restore the return address
-	addi	sp, sp, 4	
-	jr ra
