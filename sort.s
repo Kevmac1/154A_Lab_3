@@ -101,7 +101,7 @@ read_data:
 #########################
 counting_sort:
 var
-    count: Integer;
+    count: integer;
 	# Load the number of keys and maximum value
 	la    t0, numkeys        # Load address of numkeys
 	lw    t1, 0(t0)          # Load the number of keys into t1
