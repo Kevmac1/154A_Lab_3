@@ -110,65 +110,6 @@ counting_sort:
 	# Initialize count array to 0
 	la    t3, count          # Address of the count array
 	li    t4, 0              # Value 0
-count_init_loop:
-	beq   t2, zero, done_init_count # Break when maxnumber reaches 0
-	sw    t4, 0(t3)          # Store 0 at the current count index
-	addi  t3, t3, 4          # Move to next index
-	addi  t2, t2, -1         # Decrement maxnumber
-	j     count_init_loop    # Repeat until count array initialized
-done_init_count:
-
-	# Step 1: Count the occurrences of each key
-	la    t3, key            # Address of the key array
-	la    t4, count          # Address of the count array
-	lw    t5, numkeys        # Load the number of keys
-key_count_loop:
-	beq   t5, zero, done_count_keys  # Break if no more keys
-	lw    t6, 0(t3)          # Load the key value
-	sll   t7, t6, 2          # Multiply key by 4 to index count array
-	add   t8, t4, t7         # Address of count[key]
-	lw    t9, 0(t8)          # Load count[key]
-	addi  t9, t9, 1          # Increment count[key]
-	sw    t9, 0(t8)          # Store updated count[key]
-	addi  t3, t3, 4          # Move to the next key
-	addi  t5, t5, -1         # Decrement numkeys
-	j     key_count_loop
-done_count_keys:
-
-	# Step 2: Accumulate the counts
-	la    t4, count          # Address of the count array
-	addi  t5, t2, -1         # Set loop counter for accumulation
-accum_loop:
-	blt   t5, zero, done_accum # If done accumulating
-	lw    t6, 0(t4)          # Load count[i]
-	addi  t4, t4, 4          # Move to the next count
-	lw    t7, 0(t4)          # Load count[i+1]
-	add   t7, t7, t6         # Accumulate count[i+1] += count[i]
-	sw    t7, 0(t4)          # Store accumulated value
-	addi  t5, t5, -1         # Decrement loop counter
-	j     accum_loop
-done_accum:
-
-	# Step 3: Place the keys into output array
-	la    t3, key            # Address of the key array
-	la    t4, count          # Address of the count array
-	la    t8, output         # Address of the output array
-	lw    t5, numkeys        # Load the number of keys
-place_loop:
-	beq   t5, zero, done_place_keys  # Break when all keys are placed
-	lw    t6, 0(t3)          # Load the key value
-	sll   t7, t6, 2          # Multiply key by 4 to index count array
-	add   t9, t4, t7         # Address of count[key]
-	lw    t10, 0(t9)         # Load count[key]
-	addi  t10, t10, -1       # Decrement count[key]
-	sw    t10, 0(t9)         # Store updated count[key]
-	sll   t10, t10, 2        # Multiply count[key] by 4 (for word offset)
-	add   t11, t8, t10       # Address of output[count[key]]
-	sw    t6, 0(t11)         # Place key in the output array
-	addi  t3, t3, 4          # Move to the next key
-	addi  t5, t5, -1         # Decrement numkeys
-	j     place_loop
-done_place_keys:
 
 
 
