@@ -51,8 +51,8 @@ main:
     la      a0, student       # Load student name string
     ecall
     
-    jal     process_arguments # Load arguments into registers
-    jal     read_data         # Read input data
+    jal     process_arguments  # Load arguments into registers
+    jal     read_data          # Read input data
     j       ready
 
 process_arguments:
@@ -73,25 +73,20 @@ read_data:
     ecall
     mv      a0, t1           # Restore key array address
 
-    la      t0, data1
-    lw      t4, 0(t0)
-    sw      t4, 0(a0)        # Store data1
-    la      t0, data2
-    lw      t4, 0(t0)
-    sw      t4, 4(a0)        # Store data2
-    la      t0, data3
-    lw      t4, 0(t0)
-    sw      t4, 8(a0)        # Store data3
-    la      t0, data4
-    lw      t4, 0(t0)
-    sw      t4, 12(a0)       # Store data4
-    la      t0, data5
-    lw      t4, 0(t0)
-    sw      t4, 16(a0)       # Store data5
-    la      t0, data6
-    lw      t4, 0(t0)
-    sw      t4, 20(a0)       # Store data6
+    # Load input data into the key array
+    li      t0, 0            # Counter
+    li      t4, 0            # Data array index
 
+load_data:
+    bge     t0, 6, finish_loading_data  # Stop when 6 elements are loaded
+    lw      t5, data1(t4)   # Load data element
+    sw      t5, 0(a0)       # Store data in key array
+    addi    a0, a0, 4       # Move to the next position in key array
+    addi    t0, t0, 1       # Increment counter
+    addi    t4, t4, 4       # Move to the next data element
+    j       load_data
+
+finish_loading_data:
     jr      ra
 
 counting_sort:
@@ -115,12 +110,12 @@ counting_sort:
 
     # Initialize count array to 0
     mv      t0, s4           # t0 = count array pointer
-    li      t1, 0           # t1 = counter
+    li      t1, 0             # t1 = counter
 init_count:
-    bgt     t1, s3, count_keys
-    sw      zero, 0(t0)
-    addi    t0, t0, 4
-    addi    t1, t1, 1
+    bgt     t1, s3, count_keys  # Check if count array is initialized
+    sw      zero, 0(t0)      # Set count[t1] to 0
+    addi    t0, t0, 4        # Move to the next count position
+    addi    t1, t1, 1        # Increment counter
     j       init_count
 
 count_keys:
@@ -129,26 +124,29 @@ count_keys:
 count_loop:
     bge     t1, s2, prep_cumulative
     lw      t2, 0(t0)       # t2 = current key
-    slli    t3, t2, 2      # t3 = offset in count array
-    add     t3, s4, t3     # t3 = address in count array
-    lw      t4, 0(t3)      # t4 = current count
-    addi    t4, t4, 1      # increment count
-    sw      t4, 0(t3)      # store updated count
-    addi    t0, t0, 4      # next key
-    addi    t1, t1, 1      # increment counter
+    bgt     t2, s3, count_loop_next # Ensure the key is within bounds
+    slli    t3, t2, 2       # t3 = offset in count array
+    add     t3, s4, t3      # t3 = address in count array
+    lw      t4, 0(t3)       # t4 = current count
+    addi    t4, t4, 1       # increment count
+    sw      t4, 0(t3)       # store updated count
+
+count_loop_next:
+    addi    t0, t0, 4       # next key
+    addi    t1, t1, 1       # increment counter
     j       count_loop
 
 prep_cumulative:
     li      t1, 1          # start from index 1
 cumulative_loop:
     bgt     t1, s3, build_output
-    slli    t2, t1, 2     # t2 = current offset
-    add     t2, s4, t2    # t2 = current address
-    addi    t3, t2, -4    # t3 = previous address
-    lw      t4, 0(t2)     # t4 = current value
-    lw      t5, 0(t3)     # t5 = previous value
-    add     t4, t4, t5    # add previous to current
-    sw      t4, 0(t2)     # store sum
+    slli    t2, t1, 2       # t2 = current offset
+    add     t2, s4, t2      # t2 = current address
+    addi    t3, t2, -4      # t3 = previous address
+    lw      t4, 0(t2)       # t4 = current value
+    lw      t5, 0(t3)       # t5 = previous value
+    add     t4, t4, t5      # add previous to current
+    sw      t4, 0(t2)       # store sum
     addi    t1, t1, 1
     j       cumulative_loop
 
@@ -158,18 +156,18 @@ build_output:
     addi    t6, t6, -1     # adjust to 0-based index
 output_loop:
     bltz    t6, sort_done
-    slli    t1, t6, 2     # t1 = offset in key array
-    add     t1, s0, t1    # t1 = address in key array
-    lw      t2, 0(t1)     # t2 = current key
-    slli    t3, t2, 2     # t3 = offset in count array
-    add     t3, s4, t3    # t3 = address in count array
-    lw      t4, 0(t3)     # t4 = position
-    addi    t4, t4, -1    # decrement position
-    sw      t4, 0(t3)     # store updated position
-    slli    t5, t4, 2     # t5 = offset in output array
-    add     t5, s1, t5    # t5 = address in output array
-    sw      t2, 0(t5)     # store key in output
-    addi    t6, t6, -1    # decrement counter
+    slli    t1, t6, 2      # t1 = offset in key array
+    add     t1, s0, t1     # t1 = address in key array
+    lw      t2, 0(t1)      # t2 = current key
+    slli    t3, t2, 2      # t3 = offset in count array
+    add     t3, s4, t3     # t3 = address in count array
+    lw      t4, 0(t3)      # t4 = position
+    addi    t4, t4, -1     # decrement position
+    sw      t4, 0(t3)      # store updated position
+    slli    t5, t4, 2      # t5 = offset in output array
+    add     t5, s1, t5     # t5 = address in output array
+    sw      t2, 0(t5)      # store key in output
+    addi    t6, t6, -1     # decrement counter
     j       output_loop
 
 sort_done:
@@ -189,84 +187,12 @@ sort_done:
 ready:
     jal     initial_values    # print initial values
     
-    mv      t2, a0
     li      a7, 4
     la      a0, code_start_msg
     ecall
-    mv      a0, t2
     
     jal     counting_sort     # perform counting sort
     
     jal     sorted_list_print # print sorted values
     
-    lw      ra, 0(sp)        # restore return address
-    addi    sp, sp, 4
-    jr      ra               # return to OS
-
-print_results:
-    mv      t0, a2          # Number of elements
-    mv      t1, a0          # Base address of array
-    mv      t2, a0          # Save base address
-
-print_loop:    
-    beqz    t0, print_done
-    addi    t0, t0, -1
-    lw      t3, 0(t1)
-    
-    li      a7, 1           # print integer
-    mv      a0, t3
-    ecall
-    
-    li      a7, 4           # print newline
-    la      a0, nl
-    ecall
-    
-    addi    t1, t1, 4       # next element
-    j       print_loop
-
-print_done:
-    mv      a0, t2 
-    jr      ra    
-
-initial_values:
-    mv      t2, a0
-    addi    sp, sp, -4
-    sw      ra, 0(sp)
-    
-    li      a7, 4
-    la      a0, initial_print
-    ecall
-    
-    mv      a0, t2
-    jal     print_results
-    
-    lw      ra, 0(sp)
-    addi    sp, sp, 4
-    jr      ra
-
-sorted_list_print:
-    mv      t2, a0
-    addi    sp, sp, -4
-    sw      ra, 0(sp)
-    
-    li      a7, 4
-    la      a0, sort_print
-    ecall
-    
-    mv      a0, t2
-    
-    # swap a0, a1
-    mv      t2, a0
-    mv      a0, a1
-    mv      a1, t2
-    
-    jal     print_results
-    
-    # swap back a1, a0
-    mv      t2, a0
-    mv      a0, a1
-    mv      a1, t2
-    
-    lw      ra, 0(sp)
-    addi    sp, sp, 4    
-    jr      ra
+    lw     
